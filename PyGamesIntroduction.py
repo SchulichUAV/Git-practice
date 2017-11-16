@@ -1,6 +1,7 @@
 import sys
 import pygame
 
+
 class GUI():
     def __init__(self, table):
         pygame.init()
@@ -24,7 +25,8 @@ class GUI():
                     else:
                         color = (255, 255, 255)
                         border = 1
-                    pygame.draw.rect(self.screen, color, (x * 64, y * 64, 64, 64), border)
+                    pygame.draw.rect(self.screen, color,
+                                     (x * 64, y * 64, 64, 64), border)
             pygame.display.flip()
 
     def update(self, table):

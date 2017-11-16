@@ -1,15 +1,16 @@
 import sys
-def mirror(str):
-	return str + str[::-1]
 
+
+def mirror(str):
+    return str + str[::-1]
 
 
 def remove_letter(ch, str):
-	result = ""
-	for letter in str[:]:
-		if not letter == ch:
-			result += letter
-	return result
+    result = ""
+    for letter in str[:]:
+        if not letter == ch:
+            result += letter
+    return result
 
 
 '''

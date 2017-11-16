@@ -5,11 +5,13 @@ Created on Oct 1, 2017
 '''
 import math
 
+
 def area_of_circle(r):
     area = (math.pi) * (r ** 2)
-    area = round(area,3)
+    area = round(area, 3)
     print(area)
     return area
+
 
 count = 0
 n = 100

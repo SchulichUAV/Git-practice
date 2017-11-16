@@ -3,6 +3,7 @@ import sys
 import math
 import random
 
+
 class Car():
     numberOfCars = 0
 
@@ -16,11 +17,14 @@ class Car():
         else:
             self.rect = pygame.rect.Rect(x * 64, y * 64, 64, length * 64)
         self.length = length
+        self.isEasing = False
         self.occupied = []
         self.update()
         self.color = self.generateColor(60)
 
-    def generateColor(self, x):
+    @staticmethod
+    def generateColor(x):
+        ''' Generate a nice pastel colour '''
         r = random.randint(0, 255)
         g = random.randint(0, 255)
         b = random.randint(0, 255)
@@ -40,6 +44,18 @@ class Car():
         else:
             for y in range(0, self.length):
                 self.occupied.append([self.x, self.y + y])
+        self.ease()
+
+    def ease(self):
+        if self.isEasing:
+            self.rect.x = self.rect.x * 0.90 + self.x * 64 * 0.10
+            self.rect.y = self.rect.y * 0.90 + self.y * 64 * 0.10
+            if self.isHorizontal and math.fabs(self.rect.x - (self.x * 64)) < 10:
+                self.rect.x = self.x * 64
+                self.isEasing = False
+            elif not self.isHorizontal and math.fabs(self.rect.y - (self.y * 64)) < 10:
+                self.rect.y = self.y * 64
+                self.isEasing = False
 
     def __del__(self):
         Car.numberOfCars -= 1
@@ -59,7 +75,6 @@ class RushHour():
         for x in range(row):
             for y in range(col):
                 table[x][y] = '.'
-
         return table
 
     def addCar(self, x, y, isHorizontal, length):
@@ -133,11 +148,13 @@ class RushHour():
 
         if car is not None:
             if car.isHorizontal:
-                valid = self.isLegalMove(car.x + (1 * move), car.y, True, car.length, id=id)
+                valid = self.isLegalMove(
+                    car.x + (1 * move), car.y, True, car.length, id=id)
                 if valid:
                     car.x += 1 * move
             else:
-                valid = self.isLegalMove(car.x, car.y + (1 * move), False, car.length, id=id)
+                valid = self.isLegalMove(
+                    car.x, car.y + (1 * move), False, car.length, id=id)
                 if valid:
                     car.y += 1 * move
             car.update()
@@ -181,31 +198,38 @@ class GUI():
         pygame.init()
         self.table = table
         size = width, height = 640, 640
-        self.black = 0, 0, 0
+        self.backgroundColor = Car.generateColor(50)
         self.screen = pygame.display.set_mode(size)
         self.focusedCar = None
 
     def render(self):
+        import time
+        fps = 59.99
+        time_delta = 1 / fps
         while True:
+            time.sleep(time_delta)
             self.listen()
-            self.screen.fill(self.black)
+            self.screen.fill(self.backgroundColor)
             color = (0, 255, 0)
             focusedColor = (0, 0, 255)
             border = 0
             for x in range(len(self.table)):
                 for y in range(len(self.table[0])):
-                    pygame.draw.rect(self.screen, (255, 255, 255), (x * 64, y * 64, 64, 64), 1)
+                    pygame.draw.rect(self.screen, (0, 0, 0),
+                                     (x * 64, y * 64, 64, 64), 1)
 
             for car in self.game.listOfCars:
+                car.update()
                 if self.focusedCar == car:
                     pygame.draw.rect(self.screen, car.color, car.rect)
-                    pygame.draw.rect(self.screen, focusedColor, car.rect,5)
+                    pygame.draw.rect(self.screen, focusedColor, car.rect, 5)
                 else:
                     pygame.draw.rect(self.screen, car.color, car.rect, border)
                 color = (0, 255, 0)
 
             color = (255, 255, 0)
-            pygame.draw.rect(self.screen, color, (self.game.end[0] * 64, self.game.end[1] * 64, 64, 64), border)
+            pygame.draw.rect(
+                self.screen, color, (self.game.end[0] * 64, self.game.end[1] * 64, 64, 64), border)
             pygame.display.update()
 
     def listen(self):
@@ -218,6 +242,7 @@ class GUI():
                 for car in self.game.listOfCars:
                     if(car.rect.collidepoint(x, y)):
                         self.focusedCar = car
+                        self.isEasing = False
                         if self.focusedCar.isHorizontal:
                             self.offset = car.rect.x - x
                         else:
@@ -225,13 +250,15 @@ class GUI():
 
             elif event.type == pygame.MOUSEMOTION and self.focusedCar is not None:
                 if self.focusedCar.isHorizontal:
-                    self.game.moveCar(self.focusedCar.id, int(round((x + self.offset) / 64, 0)) - (self.focusedCar.x))
+                    self.game.moveCar(self.focusedCar.id, int(
+                        round((x + self.offset) / 64, 0)) - (self.focusedCar.x))
                     if(self.focusedCar.x == round((x + self.offset) / 64, 0)):
                         if(self.game.isLegalMove(math.ceil((x + self.offset) / 64), int(self.focusedCar.y), True, self.focusedCar.length, self.focusedCar.id)):
                             if(self.game.isLegalMove((x + self.offset) // 64, int(self.focusedCar.y), True, self.focusedCar.length, self.focusedCar.id)):
                                 self.focusedCar.rect.x = x + self.offset
                 else:
-                    self.game.moveCar(self.focusedCar.id, int(round((y + self.offset) / 64, 0)) - (self.focusedCar.y))
+                    self.game.moveCar(self.focusedCar.id, int(
+                        round((y + self.offset) / 64, 0)) - (self.focusedCar.y))
                     if(self.focusedCar.y == round((y + self.offset) / 64, 0)):
                         if(self.game.isLegalMove(int(self.focusedCar.x), math.ceil((y + self.offset) / 64), False, self.focusedCar.length, self.focusedCar.id)):
                             if(self.game.isLegalMove(int(self.focusedCar.x), (y + self.offset) // 64, False, self.focusedCar.length, self.focusedCar.id)):
@@ -240,17 +267,11 @@ class GUI():
                 self.game.printTable()
 
             elif event.type == pygame.MOUSEBUTTONUP and self.focusedCar is not None:
-                self.focusedCar.update()
+                self.focusedCar.isEasing = True
                 self.game.updateTable()
                 self.focusedCar = None
             else:
-                for car in self.game.listOfCars:
-                    car.rect.x = car.rect.x * 0.90 + car.x * 64 * 0.10
-                    car.rect.y = car.rect.y * 0.90 + car.y * 64 * 0.10
-                    if math.fabs(car.rect.x - (car.x * 64)) < 20:
-                        car.rect.x = car.x * 64
-                    if math.fabs(car.rect.y - (car.y * 64)) < 20:
-                        car.rect.y = car.y * 64
+                pass
 
     def piyel2Table(self, x, y):
         return (x // 64, y // 64)
