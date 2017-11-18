@@ -12,10 +12,6 @@ class Car():
         self.id = Car.numberOfCars
         self.x, self.y = x, y
         self.isHorizontal = isHorizontal
-        if(isHorizontal):
-            self.rect = pygame.rect.Rect(x * 64, y * 64, length * 64, 64)
-        else:
-            self.rect = pygame.rect.Rect(x * 64, y * 64, 64, length * 64)
         self.length = length
         self.isEasing = False
         self.occupied = []
@@ -32,8 +28,6 @@ class Car():
         r_ = ((100 - x) * r + x * 255) / 100
         g_ = ((100 - x) * g + x * 255) / 100
         b_ = ((100 - x) * b + x * 255) / 100
-
-        print(r_, g_, b_)
         return (r_, g_, b_)
 
     def update(self):
@@ -44,21 +38,23 @@ class Car():
         else:
             for y in range(0, self.length):
                 self.occupied.append([self.x, self.y + y])
-        self.ease()
 
-    def ease(self):
+    def graphicUpdate(self, scale):
+                if(self.isHorizontal):
+                    self.rect = pygame.rect.Rect(self.x * scale,self. y * scale, self.length * scale, scale)
+                else:
+                    self.rect = pygame.rect.Rect(self.x * scale, self.y * scale, scale, self.length * scale)
+
+    def ease(self, scale):
         if self.isEasing:
-            self.rect.x = self.rect.x * 0.90 + self.x * 64 * 0.10
-            self.rect.y = self.rect.y * 0.90 + self.y * 64 * 0.10
-            if self.isHorizontal and math.fabs(self.rect.x - (self.x * 64)) < 10:
-                self.rect.x = self.x * 64
+            self.rect.x = self.rect.x * 0.90 + self.x * scale * 0.10
+            self.rect.y = self.rect.y * 0.90 + self.y * scale * 0.10
+            if self.isHorizontal and math.fabs(self.rect.x - (self.x * scale)) < 10:
+                self.rect.x = self.x * scale
                 self.isEasing = False
-            elif not self.isHorizontal and math.fabs(self.rect.y - (self.y * 64)) < 10:
-                self.rect.y = self.y * 64
+            elif not self.isHorizontal and math.fabs(self.rect.y - (self.y * scale)) < 10:
+                self.rect.y = self.y * scale
                 self.isEasing = False
-
-    def __del__(self):
-        Car.numberOfCars -= 1
 
 
 class RushHour():
@@ -68,6 +64,20 @@ class RushHour():
         self.end = end
         self.printTable()
         self.listOfCars = []
+
+    def loadMap(self, filePath):
+        self.table = self.generateTable(6, 6)
+        text_file = open(filePath, 'r')
+        lines = text_file.read().splitlines()
+        for line in lines:
+            isHorizontal = False
+            values = line.split(', ')
+            if values[0] == 'h':
+                isHorizontal = True
+            length = int(values[1])
+            y = int(values[2])
+            x = int(values[3])
+            self.addCar(x, y, isHorizontal, length)
 
     def generateTable(self, row, col):
         table = [[99 for x in range(col)] for y in range(row)]
@@ -194,10 +204,11 @@ class RushHour():
 
 class GUI():
     def __init__(self, table, game):
+        self.scale = 64 * 2
         self.game = game
         pygame.init()
         self.table = table
-        size = width, height = 640, 640
+        size = width, height = 6 * self.scale, 6 * self.scale
         self.backgroundColor = Car.generateColor(50)
         self.screen = pygame.display.set_mode(size)
         self.focusedCar = None
@@ -206,30 +217,35 @@ class GUI():
         import time
         fps = 59.99
         time_delta = 1 / fps
+        for car in self.game.listOfCars:
+            car.graphicUpdate(self.scale)
         while True:
+            if self.game.isVictory():
+                sys.exit()
             time.sleep(time_delta)
             self.listen()
-            self.screen.fill(self.backgroundColor)
+            self.screen.fill((100, 100, 100))
             color = (0, 255, 0)
             focusedColor = (0, 0, 255)
-            border = 0
+            border = 2
             for x in range(len(self.table)):
                 for y in range(len(self.table[0])):
                     pygame.draw.rect(self.screen, (0, 0, 0),
-                                     (x * 64, y * 64, 64, 64), 1)
+                                     (x * self.scale, y * self.scale, self.scale, self.scale), 1)
 
             for car in self.game.listOfCars:
                 car.update()
+                car.ease(self.scale)
                 if self.focusedCar == car:
-                    pygame.draw.rect(self.screen, car.color, car.rect)
                     pygame.draw.rect(self.screen, focusedColor, car.rect, 5)
+                if car.id == 1:
+                    pygame.draw.rect(self.screen, (255, 0 ,0), car.rect)
                 else:
-                    pygame.draw.rect(self.screen, car.color, car.rect, border)
-                color = (0, 255, 0)
+                    pygame.draw.rect(self.screen, car.color, car.rect)
+                    pygame.draw.rect(self.screen, (0, 0, 0), car.rect, border)
 
-            color = (255, 255, 0)
             pygame.draw.rect(
-                self.screen, color, (self.game.end[0] * 64, self.game.end[1] * 64, 64, 64), border)
+                self.screen, color, (self.game.end[0] * self.scale, self.game.end[1] * self.scale, self.scale, self.scale), border)
             pygame.display.update()
 
     def listen(self):
@@ -251,17 +267,17 @@ class GUI():
             elif event.type == pygame.MOUSEMOTION and self.focusedCar is not None:
                 if self.focusedCar.isHorizontal:
                     self.game.moveCar(self.focusedCar.id, int(
-                        round((x + self.offset) / 64, 0)) - (self.focusedCar.x))
-                    if(self.focusedCar.x == round((x + self.offset) / 64, 0)):
-                        if(self.game.isLegalMove(math.ceil((x + self.offset) / 64), int(self.focusedCar.y), True, self.focusedCar.length, self.focusedCar.id)):
-                            if(self.game.isLegalMove((x + self.offset) // 64, int(self.focusedCar.y), True, self.focusedCar.length, self.focusedCar.id)):
+                        round((x + self.offset) / self.scale, 0)) - (self.focusedCar.x))
+                    if(self.focusedCar.x == round((x + self.offset) / self.scale, 0)):
+                        if(self.game.isLegalMove(math.ceil((x + self.offset) / self.scale), int(self.focusedCar.y), True, self.focusedCar.length, self.focusedCar.id)):
+                            if(self.game.isLegalMove((x + self.offset) // self.scale, int(self.focusedCar.y), True, self.focusedCar.length, self.focusedCar.id)):
                                 self.focusedCar.rect.x = x + self.offset
                 else:
                     self.game.moveCar(self.focusedCar.id, int(
-                        round((y + self.offset) / 64, 0)) - (self.focusedCar.y))
-                    if(self.focusedCar.y == round((y + self.offset) / 64, 0)):
-                        if(self.game.isLegalMove(int(self.focusedCar.x), math.ceil((y + self.offset) / 64), False, self.focusedCar.length, self.focusedCar.id)):
-                            if(self.game.isLegalMove(int(self.focusedCar.x), (y + self.offset) // 64, False, self.focusedCar.length, self.focusedCar.id)):
+                        round((y + self.offset) / self.scale, 0)) - (self.focusedCar.y))
+                    if(self.focusedCar.y == round((y + self.offset) / self.scale, 0)):
+                        if(self.game.isLegalMove(int(self.focusedCar.x), math.ceil((y + self.offset) / self.scale), False, self.focusedCar.length, self.focusedCar.id)):
+                            if(self.game.isLegalMove(int(self.focusedCar.x), (y + self.offset) // self.scale, False, self.focusedCar.length, self.focusedCar.id)):
                                 self.focusedCar.rect.y = y + self.offset
                 self.game.updateTable()
                 self.game.printTable()
@@ -274,24 +290,18 @@ class GUI():
                 pass
 
     def piyel2Table(self, x, y):
-        return (x // 64, y // 64)
-
-    def update(self, table):
-        self.table = table
+        return (x // self.scale, y // self.scale)
 
 
 if __name__ == '__main__':
-    game = RushHour(10, 10, (9, 5))
-    print(game.addCar(0, 5, True, 3))
-    print(game.addCar(3, 0, True, 3))
-    print(game.addCar(5, 5, False, 5))
+    game = RushHour(6, 6, (5, 2))
     game.printTable()
     gui = GUI(game.table, game)
+    game.loadMap(sys.argv[1])
+    gui.render()
 
     while(not game.isVictory()):
-        gui.render()
         user = int(input('select car: '))
         game.moveCar(user, game.userMove)
         game.printTable()
-        gui.update(game.table)
         print('Victory State: ', game.isVictory())

@@ -1,5 +1,5 @@
 from Tools.PrintLog import printLog
-import Tools.PrintLog as PL
+import Tools.PrintLog
 
 
 def mirror(str):
@@ -15,7 +15,6 @@ def remove_letter(ch, str):
 
 
 if __name__ == "__main__":
-    PL.changeFilePath('Foo\\Bar')
     printLog(mirror('abc'))
     printLog(mirror('def'))
     printLog(mirror('ghi'))
