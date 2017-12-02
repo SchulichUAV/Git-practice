@@ -1,4 +1,4 @@
-from Tools.PrintLog import printLog
+from Tools.PrintLog import print_log
 import Tools.PrintLog
 
 
@@ -15,10 +15,10 @@ def remove_letter(ch, str):
 
 
 if __name__ == "__main__":
-    printLog(mirror('abc'))
-    printLog(mirror('def'))
-    printLog(mirror('ghi'))
-    printLog(mirror('123'))
+    print_log(mirror('abc'))
+    print_log(mirror('def'))
+    print_log(mirror('ghi'))
+    print_log(mirror('123'))
 
 '''
 def test(did_pass):
